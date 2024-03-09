@@ -1,0 +1,6 @@
+.idea/
+.vs/
+images/
+instance/
+venv/
+__pycache__/

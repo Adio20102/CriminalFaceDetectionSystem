@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Home</title>
+    <style>
+        .logo_box {
+            background-color: #ffdc73;
+            border: 5px solid #BE8400;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center; /* Added property for horizontal centering */
+        }
+
+        .logo_box img {
+            width: 80px; /* Adjust width as needed */
+        }
+
+        h1 {
+            font-size: 2.4em;
+            margin-left: 10px; /* Adjust margin as needed */
+        }
+
+        .button-container {
+            display: flex;
+            height: 80vh;
+            flex-direction: column;
+            justify-content: center; /* Horizontal centering */
+            align-items: flex-end; /* Vertical centering */
+<!--            border: 2px solid #BE8400;-->
+        }
+        .container{
+            display: flex;
+            height: 80vh;
+            justify-content: space-around;
+            flex-direction: row;
+            align-items: center;
+        }
+
+        .container img {
+            margin-top: 20px;
+            width: 580px; /* Adjust width as needed */
+        }
+        .myButton {
+            background-color: #ffdc73;
+            border: 5px solid #BE8400;
+            color: black;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 2em;
+            margin: 40px 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body >
+    <div class="logo_box">
+        <img src="https://i.ibb.co/JztCbnX/logo.png" alt=" " />
+        <h1 >Criminal Face Detection System</h1>
+    </div>
+    <div class="container">
+        <img src="https://i.ibb.co/p0h5fNm/e.png" alt=" " />
+
+        <div class="button-container">
+
+        <a href="/register_form" class="myButton">Register Criminal</a>
+        <a href="/img_inv" class="myButton">Investigate Image</a>
+        <a href="/inv_vd" class="myButton">Investigate Video</a>
+        </div>
+    </div>
+</body>
+</html>

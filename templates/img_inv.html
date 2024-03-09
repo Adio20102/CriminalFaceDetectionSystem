@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Investigate Image</title>
+    <style>
+
+        .box {
+            background-color: #ffdc73;
+            border: 5px solid #BE8400;
+            display: flex;
+            width:auto;
+            flex-direction: row;
+            align-items: center;
+            pointer-events: none;
+            justify-content: center ; /* Added property for horizontal centering */
+            // Prevents users from highlighting the placeholder.
+            -webkit-user-select: none; /* Safari */
+            -ms-user-select: none; /* IE 10 and IE 11 */
+            user-select: none; /* Standard syntax */
+            text-align:center;
+        }
+
+        .container {
+<!--            display: flex;-->
+<!--            flex-direction: column;-->
+            height: 100vh auto;
+            width:  100vw auto;
+            background-color: #ffdc73;
+            border: 5px solid  #BE8400;
+            margin: 15px 0px;
+            padding: 25px;
+            justify-content:left;
+            justify-content: space-around;
+            justify-content:left;
+        }
+        .imgform label{
+           font-size:1.4em;
+        }
+        #submit{
+           height:1.3em;
+           font-size:1.4em;
+        }
+        .criminalInfo{
+
+            height:auto;
+            margin: 15px 0px;
+            border: 0px solid red;
+            display: flex;
+            flex-direction: column;
+            padding-left: 1em;
+
+            font-size:1.4em;
+            @media (min-width: 768px) {
+                    flex-direction: row;
+                    overflow-x: scroll; /* Hide horizontal scrollbar */
+                    overflow-y: hidden;
+            }
+        }
+        .cd{
+           margin-top: 1.3em;
+           margin-bottom:0.6em;
+           border: 4px solid #BE8400;
+           height: 1.4em ;
+           @media (min-width: 768px) {
+                    margin-top: 1em;
+                    height: 2.4em ;
+                    margin-left:0;
+                    margin-right:0.2em;
+           }
+           border-radius: 5px;
+           background: white;
+           width:auto;
+           pointer-events: none;
+           // Prevents users from highlighting the placeholder.
+           -webkit-user-select: none; /* Safari */
+           -ms-user-select: none; /* IE 10 and IE 11 */
+           user-select: none; /* Standard syntax */
+           text-align:center;
+        }
+
+        .criminals{
+            margin-top: 1em;
+            @media (max-width: 768px) {
+                    margin-top: 0em ;
+           }
+            marin-left:0;
+            margin-right:1em;
+<!--            border: 0px solid black;-->
+            width:300px;
+            font-size:1em;
+
+        }
+
+       .info{
+          margin-top:1em;
+          background:white;
+          border: 4px solid #BE8400;
+          border-radius: 5px;
+       }
+
+       .flash-message{
+           top-margin:0;
+       }
+
+
+
+    </style>
+</head>
+<body>
+<div class="box">
+    <h1>Investigate Image</h1>
+</div>
+<div class="container">
+    <div class="imgform">
+        <form action="/img_inv" method="POST" enctype="multipart/form-data">
+            <label for="image">Upload Image:</label>
+            <input type="file" id="image" name="image" accept="image/*" required>
+            <br><br>
+            <input id="submit" type="submit" value="Check"><br>
+        </form>
+    </div>
+    <div class="criminalInfo">
+
+        {% if criminals %}
+        {% set printed_criminals = [] %}  <!-- Initialize a list to keep track of printed criminals -->
+        {% for criminal in criminals %}
+        {% if criminal.national_verification_number not in printed_criminals %}
+        <!-- Check if the criminal has not been printed -->
+        {% set _ = printed_criminals.append(criminal.national_verification_number) %}
+        <!-- Add the criminal to the list of printed criminals -->
+
+            <div class="cd">
+                &nbsp;Criminal Detected&nbsp;
+            </div>
+            <div class="criminals">
+                {% if criminal.photo %}
+                <img id="imageDisplay" src="data:image/jpeg;base64,{{ criminal.photo }}" alt="Criminal Photo"
+                     style="max-width: 300px; max-height: 300px;  display: grid; margin: 0 auto;">
+                {% endif %}
+                <div class="info">
+                    <p>&nbsp;Name: {{ criminal.name }}</p>
+                    <p>&nbsp;Date of Birth: {{ criminal.date_of_birth }}</p>
+                    <p>&nbsp;Gender: {{ criminal.gender }}</p>
+                    <p>&nbsp;National&nbsp;Verification&nbsp;Number: <span>{{ criminal.national_verification_number }}</span></p>
+                    <p><span>&nbsp;Crime Type</span>:&nbsp;
+                        <span class="crime-list">
+                          {% for crime_type in criminal.crime_type.split(",") %}
+                                {{ crime_type.strip() }}{% if not loop.last %}, {% endif %}
+                          {% endfor %}
+                        </span>
+                    </p>
+                    <p>&nbsp;Age: {{ criminal.age }}</p>
+                </div>
+            </div>
+
+            {% endif %}
+            {% endfor %}
+
+        {% else %}
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+<!--                    <div class="flash-message">-->
+                        {% for message in messages %}
+                            <p class="flash-messasge">{{ message }}</p>
+<!--                        {% endfor %}-->
+<!--                    </div>-->
+                {% else %}
+                    <p class="flash-message">Click The Check Button</p>
+                {% endif %}
+            {% endwith %}
+
+        {% endif %}
+    </div>
+</div>
+
+<!--<script>-->
+<!--        // Clear flashed messages-->
+
+
+<!--</script>-->
+
+
+
+</body>
+</html>

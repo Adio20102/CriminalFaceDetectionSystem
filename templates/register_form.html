@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register Criminal</title>
+    <style>
+        ._box {
+            background-color: #ffdc73;
+            border: 5px solid #BE8400;
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            pointer-events: none;
+            justify-content: center ; /* Added property for horizontal centering */
+        }
+        .container {
+            display: flex;
+            height: 548px;
+            background-color: #ffdc73;
+            border: 5px solid  #BE8400;
+            margin: 15px 0px;
+            padding: 25px;
+            justify-content: space-around;
+        }
+        .container img{
+           border: 10px solid black;
+<!--           margin-left:5em;-->
+           height: 20em;
+           width: 20em;
+        }
+        .actionform{
+           margin-top: 0.4em;
+           width: 63em;
+           border: 0px solid red;
+        }
+
+        .actionform input {
+            width: clamp(156px, 50vw, 220px);
+            height: 1.3rem;
+            padding: 0 1.25rem;
+            border: 1px solid $black;
+            border-radius: 2px;
+            margin: 0.625rem auto;
+            transition: all 250ms;
+            @media (min-width: 768px) {
+              width: clamp(1px, 35vw, 480px);
+              margin-left:1.7em;
+            }
+        }
+
+        .actionform label{
+           font-size:1.4em;
+        }
+        #gender{
+           font-size: 1.15em;
+        }
+        #register{
+           height:1.3em;
+           font-size:1.4em;
+        }
+        #dob{
+           width:8em;
+        }
+        &::placeholder {
+           display: none;
+           font-size:1.4em;
+           color: transparent;
+          // Prevents users from highlighting the placeholder.
+           -webkit-user-select: none; /* Safari */
+           -ms-user-select: none; /* IE 10 and IE 11 */
+           user-select: none; /* Standard syntax */
+        }
+        /* Increasing font size of placeholder text */
+        .actionform input::placeholder {
+           font-size: 1.2em;
+        }
+        ::-webkit-input-placeholder {
+            text-align: center;
+        }
+        :-moz-placeholder {
+            text-align: center;
+        }
+
+        .flash-message {
+            background-color: #ff3333; /* Red background color */
+            color: white; /* White text color */
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 1.2em;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+    </style>
+
+</head>
+<body>
+<div class="_box">
+    <h1>Register Criminal</h1>
+</div>
+
+<div class="container">
+    <div class="actionform">
+        <form action="/register" method="POST" enctype="multipart/form-data">
+            <label for="name">Name:</label>
+            <input type="text" placeholder="Enter Criminal Name" id="name" name="name" required>
+            <br><br>
+
+            <label for="date_of_birth">Date of Birth:</label>
+            <input type="date" id="dob" placeholder="Enter Criminal DOB" id="date_of_birth" name="date_of_birth"
+                   required>
+            <br><br>
+
+            <label for="gender">Gender:</label>
+            <select id="gender" name="gender" required>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+            </select>
+            <br><br>
+
+            <label for="national_verification_number">National Verification Number:</label>
+            <input type="text" placeholder="Enter Verification Number" id="national_verification_number"
+                   name="national_verification_number" required>
+            <br><br>
+
+            <label for="crime_type">Crime Type:</label>
+            <input type="text" placeholder="Enter Crime Done" id="crime_type" name="crime_type" required>
+            <br><br>
+
+            <label for="age">Age:</label>
+            <input type="number" placeholder="Enter Criminal Age" id="age" name="age" min="0" max="200" required>
+            <br><br>
+
+            <label for="photo">Upload Photo:</label>
+            <input type="file" id="photo" name="photo" accept="image/*" required>
+            <br><br>
+            <input id="register" type="submit" value="Register">
+        </form>
+    </div>
+    <img src="https://i.ibb.co/s5N2yWn/criminal-wearing-eye-piece-and-striped-top.png" alt=" "/>
+</div>
+<script>
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                alert("{{ messages[-1] }}");
+            {% endif %}
+        {% endwith %}
+        // Clear flashed messages
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    // Do nothing, just iterate to clear messages
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+</script>
+</body>
+</html>
