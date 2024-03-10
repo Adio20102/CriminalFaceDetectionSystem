@@ -19,5 +19,11 @@ COPY . .
 # Expose port
 EXPOSE 5000
 
+# Create a non-root user
+RUN useradd -m myuser
+
+# Set the user for subsequent commands
+USER myuser
+
 # Command to run the application
 CMD ["python", "app.py"]
