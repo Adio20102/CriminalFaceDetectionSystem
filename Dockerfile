@@ -16,17 +16,11 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy your application code
 COPY . .
 
-# Create a non-root user with user ID 10001
-RUN adduser --disabled-password --gecos '' --uid 10001 myuser
-
-# Change ownership of the working directory to the non-root user
-RUN chown -R myuser:myuser /app
-
-# Switch to the non-root user
-USER myuser
-
 # Expose port
 EXPOSE 5000
 
 # Command to run the application
 CMD ["python", "app.py"]
+
+# Set non-root user
+USER 12345
