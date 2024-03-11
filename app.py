@@ -3,13 +3,13 @@ import numpy as np
 import base64
 import face_recognition
 import tempfile
-import os
+
 
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
-# postgres://criminaldatabase_user:nSJbgUwleTYMuAZMi7dj3N1TvD9afXxT@dpg-cnlhr9mn7f5s73ctukgg-a.singapore-postgres.render.com/criminaldatabase
+# postgresql://criminaldatabase_user:nSJbgUwleTYMuAZMi7dj3N1TvD9afXxT@dpg-cnlhr9mn7f5s73ctukgg-a.singapore-postgres.render.com/criminaldatabase
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://criminaldatabase_user:nSJbgUwleTYMuAZMi7dj3N1TvD9afXxT@dpg-cnlhr9mn7f5s73ctukgg-a.singapore-postgres.render.com/criminaldatabase'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -86,25 +86,49 @@ def register():
                 flash('No faces Detected In The Uploaded Image.', 'error')
                 return render_template('register_form.html')
             else:
-                # Query the database for existing faces with matching national verification number, name, and gender
+                name = name.strip()
+                if name == "":
+                    flash('Input Criminal Name Properly.', 'info')
+                    return render_template('register_form.html')
+
+                crime_type = crime_type.strip()
+                if crime_type == "":
+                    flash('Input Crime Type Properly.', 'info')
+                    return render_template('register_form.html')
+
+                # Query the database for existing faces with matching national verification number
                 existing_face = DetectedFace.query.filter_by(national_verification_number=national_verification_number).first()
 
-
                 if existing_face:
-                    if existing_face.date_of_birth == date_of_birth.date() and existing_face.name == name and existing_face.gender == gender:
 
-                        if int(age) >= int(existing_face.age):
-                            existing_face.crime_type = existing_face.crime_type + ',' + crime_type
-                            existing_face.age = age
-                            db.session.commit()
-                            flash('Criminal Already Exists. \nAll Details Updated Except Previously Registered Photo.', 'info')
-                            return render_template('register_form.html')
+                    specific_face_encoding = [np.frombuffer(existing_face.face_image, dtype=np.uint8)]
+                    specific_face_encoding = [face_recognition.face_encodings(cv2.imdecode(encoding, cv2.IMREAD_COLOR))[0] for encoding in specific_face_encoding]
+                    bool = False
+                    # bool is a flag for face match
+                    # face encodings of the uploaded image is as follows:
+                    face_encods = face_recognition.face_encodings(rgb_image, face_location)
+                    for face_encod, (top, right, bottom, left) in zip(face_encods, face_location):
+                        face_matching = face_recognition.compare_faces(specific_face_encoding, face_encod)
+                        if any(face_matching):
+                            bool = True
+
+                    if bool == True:
+                        if existing_face.date_of_birth == date_of_birth.date() and existing_face.name == name and existing_face.gender == gender:
+
+                           if int(age) >= int(existing_face.age):
+                              existing_face.crime_type = existing_face.crime_type + ',' + crime_type
+                              existing_face.age = age
+                              db.session.commit()
+                              flash('Criminal is Already Registered. All Details Updated Except Previously Registered Photo.', 'info')
+                              return render_template('register_form.html')
+                           else:
+                              flash(f'Criminal Having Same Face and National Verification Number Was Previously Registered With Age: {existing_face.age}.', 'info')
+                              return render_template('register_form.html')
                         else:
-                            flash(f'Criminal With Same National Verification Number Already Exists With Age: {existing_face.age}.', 'info')
-                            return render_template('register_form.html')
+                          flash('Criminal With Same National Verification Number Already Exists.', 'info')
+                          return render_template('register_form.html')
                     else:
-
-                        flash('Criminal With Same National Verification Number Already Exists.', 'info')
+                        flash(f'A Criminal Already With Different Face Exists With National Verification Number: {existing_face.national_verification_number}' , 'info')
                         return render_template('register_form.html')
 
                 # To check is the face uploaded image is same as that of a registered criminal in the database
@@ -122,14 +146,12 @@ def register():
                             return render_template('register_form.html')
 
 
-
-
                 for (top, right, bottom, left) in face_location:
                     cropped_face = img[top:bottom, left:right]
                     # Convert image to byte array before storing
                     image_as_bytes = cv2.imencode('.jpg', cropped_face)[1].tobytes()
                     new_face = DetectedFace(
-                        name=name.strip(),
+                        name=name,
                         date_of_birth=date_of_birth,
                         age=age,
                         gender=gender,
