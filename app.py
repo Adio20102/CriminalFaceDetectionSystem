@@ -197,7 +197,7 @@ def investigate():
             face_locations_ = face_recognition.face_locations(rgb_img)
 
             if len(face_locations_) == 0:
-                flash('No faces were detected in the uploaded image.', 'error')
+                flash('No Faces Were Detected In The Uploaded Image.', 'error')
             else:
                 # Encode the uploaded image to base64 for displaying
                 _, img_encoded = cv2.imencode('.jpg', img)
@@ -206,7 +206,7 @@ def investigate():
                 # Retrieve stored faces from the database
                 stored_faces_ = DetectedFace.query.all()
                 if len(stored_faces_) == 0:
-                    flash('No faces stored in the database.', 'error')
+                    flash('No Criminal Faces Stored In The Database.', 'error')
                     return redirect(url_for('img_inv'))
 
                 # Load stored face encodings
@@ -270,69 +270,68 @@ def investigate_video():
             # Retrieve stored faces from the database
             stored_faces = DetectedFace.query.all()
             if len(stored_faces) == 0:
-                flash('No Faces Stored In The Database.', 'error')
-                return redirect(url_for('inv_vd'))
+                flash('No Criminal Faces Stored In The Database.', 'error')
 
-            # Load stored face encodings and associated information
-            stored_encodings = [np.frombuffer(face.face_image, dtype=np.uint8) for face in stored_faces]
-            stored_encodings = [face_recognition.face_encodings(cv2.imdecode(encoding, cv2.IMREAD_COLOR))[0] for
-                                encoding in stored_encodings]
-
-            # Frame skipping parameters
-            skip_frames = 15  # Skip every 5th frame
-            frame_count = 0
-
-            # number of frames with detected face
-            fwfd = 0
-            # Flag to indicate if any criminals are detected
-            criminals_detected = False
-            # Face detection and recognition logic here
-            while True:
-                ret, frame = custom_video_capture.read()
-                if not ret:
-                    break
-
-                if frame_count % skip_frames != 0:
-                    frame_count += 1
-                    continue  # Skip this frame
-
-                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                face_locations = face_recognition.face_locations(rgb_frame)
-
-                # If no faces are detected in the frame, continue to the next frame
-                if not face_locations:
-                    frame_count += 1
-                    continue
-                else:
-                    fwfd += 1
-                    CriminalDetected = False
-                    face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
-                    for encoding, (top, right, bottom, left) in zip(face_encodings, face_locations):
-                        # Compare the detected face encoding with the stored encodings
-                        matches = face_recognition.compare_faces(stored_encodings, encoding)
-                        if any(matches):
-                            matched_index = matches.index(True)
-                            # Gather information about the detected criminal
-                            criminal_info = {
-                                'name': stored_faces[matched_index].name,
-                                'date_of_birth': stored_faces[matched_index].date_of_birth,
-                                'gender': stored_faces[matched_index].gender,
-                                'national_verification_number': stored_faces[
-                                    matched_index].national_verification_number,
-                                'crime_type': stored_faces[matched_index].crime_type,
-                                'age': stored_faces[matched_index].age,
-                                'photo': base64.b64encode(stored_faces[matched_index].face_image).decode('utf-8')
-                            }
-                            criminal.append(criminal_info)
-                            criminals_detected = True
-                frame_count += 1
-            custom_video_capture.release()
-
-            if fwfd == 0:
-                flash('No Faces Detected In The Uploaded Video.', 'error')
             else:
-                if not criminals_detected:
-                    flash('No Criminals Detected.', 'error')
+               # Load stored face encodings and associated information
+               stored_encodings = [np.frombuffer(face.face_image, dtype=np.uint8) for face in stored_faces]
+               stored_encodings = [face_recognition.face_encodings(cv2.imdecode(encoding, cv2.IMREAD_COLOR))[0] for encoding in stored_encodings]
+
+               # Frame skipping parameters
+               skip_frames = 15  # Skip every 5th frame
+               frame_count = 0
+
+               # number of frames with detected face
+               fwfd = 0
+               # Flag to indicate if any criminals are detected
+               criminals_detected = False
+               # Face detection and recognition logic here
+               while True:
+                   ret, frame = custom_video_capture.read()
+                   if not ret:
+                       break
+
+                   if frame_count % skip_frames != 0:
+                       frame_count += 1
+                       continue  # Skip this frame
+
+                   rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                   face_locations = face_recognition.face_locations(rgb_frame)
+
+                   # If no faces are detected in the frame, continue to the next frame
+                   if not face_locations:
+                       frame_count += 1
+                       continue
+                   else:
+                       fwfd += 1
+                       CriminalDetected = False
+                       face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
+                       for encoding, (top, right, bottom, left) in zip(face_encodings, face_locations):
+                           # Compare the detected face encoding with the stored encodings
+                           matches = face_recognition.compare_faces(stored_encodings, encoding)
+                           if any(matches):
+                               matched_index = matches.index(True)
+                               # Gather information about the detected criminal
+                               criminal_info = {
+                                   'name': stored_faces[matched_index].name,
+                                   'date_of_birth': stored_faces[matched_index].date_of_birth,
+                                   'gender': stored_faces[matched_index].gender,
+                                   'national_verification_number': stored_faces[
+                                    matched_index].national_verification_number,
+                                   'crime_type': stored_faces[matched_index].crime_type,
+                                   'age': stored_faces[matched_index].age,
+                                   'photo': base64.b64encode(stored_faces[matched_index].face_image).decode('utf-8')
+                               }
+                               criminal.append(criminal_info)
+                               criminals_detected = True
+                       frame_count += 1
+               custom_video_capture.release()
+
+               if fwfd == 0:
+                   flash('No Faces Detected In The Uploaded Video.', 'error')
+               else:
+                   if not criminals_detected:
+                       flash('No Criminals Detected.', 'error')
     return render_template('inv_vd.html', criminals=criminal, )
 
 
