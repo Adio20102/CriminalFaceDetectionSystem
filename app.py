@@ -9,9 +9,8 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
-# postgresql://criminaldatabase_user:nSJbgUwleTYMuAZMi7dj3N1TvD9afXxT@dpg-cnlhr9mn7f5s73ctukgg-a.singapore-postgres.render.com/criminaldatabase
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://criminaldatabase_user:nSJbgUwleTYMuAZMi7dj3N1TvD9afXxT@dpg-cnlhr9mn7f5s73ctukgg-a.singapore-postgres.render.com/criminaldatabase'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///criminal_database.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'your_secret_key'
 db = SQLAlchemy(app)
