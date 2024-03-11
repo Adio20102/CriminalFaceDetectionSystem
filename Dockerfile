@@ -4,8 +4,8 @@ FROM python:3.9-slim
 RUN apt-get update && apt-get install -y cmake build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install necessary OpenGL libraries
-RUN apt-get update && apt-get install -y libgl1-mesa-glx
+# Install necessary OpenGL and GTK libraries
+RUN apt-get update && apt-get install -y libgl1-mesa-glx libglib2.0-0
 
 # Set working directory
 WORKDIR /app
