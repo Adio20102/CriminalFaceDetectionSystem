@@ -1,19 +1,20 @@
-from datetime import datetime
-from flask import Flask, render_template, request, redirect, url_for, flash
-from flask_sqlalchemy import SQLAlchemy
 import cv2
 import numpy as np
 import base64
-import os
+import face_recognition
 import tempfile
 
 
+from flask import Flask, render_template, request, redirect, url_for, flash
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
+
+# postgresql://criminaldatabase_user:nSJbgUwleTYMuAZMi7dj3N1TvD9afXxT@dpg-cnlhr9mn7f5s73ctukgg-a.singapore-postgres.render.com/criminaldatabase
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///crima.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'your_secret_key'
 db = SQLAlchemy(app)
-
 
 
 class CustomVideoCapture:
@@ -34,7 +35,7 @@ class CustomVideoCapture:
         self.video_capture.release()
 
 
-class DetectedCriminals(db.Model):
+class DetectedFace(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100))
     date_of_birth = db.Column(db.Date)
@@ -42,10 +43,10 @@ class DetectedCriminals(db.Model):
     crime_type = db.Column(db.String(100))
     age = db.Column(db.Integer)
     national_verification_number = db.Column(db.String(100))
-    x = db.Column(db.Integer)
-    y = db.Column(db.Integer)
-    w = db.Column(db.Integer)
-    h = db.Column(db.Integer)
+    top = db.Column(db.Integer)
+    right = db.Column(db.Integer)
+    left = db.Column(db.Integer)
+    bottom = db.Column(db.Integer)
     # Store the actual image data
     face_image = db.Column(db.LargeBinary)
 
@@ -74,17 +75,14 @@ def register():
         if age and crime_type and photo_file:
             photo_data = photo_file.read()  # Read the binary data of the uploaded photo
 
-            # Face detection using Haar cascade
+            # Face detection
             img_array = np.frombuffer(photo_data, dtype=np.uint8)  # Convert binary data to numpy array
             img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)  # Decode the image
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # Convert image to grayscale
-
-             # Load the Haar cascade classifier for face detection
-            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+            rgb_image = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
             # Detect faces in the uploaded image
-            faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=7, minSize=(70, 70))
-            if not len(faces):  # No faces detected
+            face_location = face_recognition.face_locations(rgb_image)
+            if not face_location:  # No faces detected
                 flash('No faces Detected In The Uploaded Image.', 'error')
                 return render_template('register_form.html')
             else:
@@ -99,85 +97,70 @@ def register():
                     return render_template('register_form.html')
 
                 # Query the database for existing faces with matching national verification number
-                existing_face = DetectedCriminals.query.filter_by(national_verification_number=national_verification_number).first()
+                existing_face = DetectedFace.query.filter_by(national_verification_number=national_verification_number).first()
 
                 if existing_face:
-                    # Check if any detected faces overlap with the existing face
-                    for (x, y, w, h) in faces:
-                        if x < existing_face.x + existing_face.w and \
-                           x + w > existing_face.x and \
-                           y < existing_face.y + existing_face.h and \
-                           y + h > existing_face.y:
-                            # If overlapping, perform necessary actions (e.g., update details)
-                            if existing_face.date_of_birth == date_of_birth.date() and existing_face.name == name and existing_face.gender == gender:
-                                if int(age) >= int(existing_face.age):
-                                    existing_face.crime_type = existing_face.crime_type + ',' + crime_type
-                                    # To handle  duplicate crimes
-                                    temp=existing_face.crime_type.split(',')
-                                    unique_elements = []
-                                    for tp in temp:
-                                        if tp not in unique_elements:
-                                            unique_elements.append(tp)
-                                    existing_face.crime_type=','.join(unique_elements)
-                                    existing_face.age = age
-                                    db.session.commit()
-                                    flash('Criminal is Already Registered. All Details Updated Except Previously Registered Photo.', 'info')
-                                    return render_template('register_form.html')
-                                else:
-                                    flash(f'Criminal Having Same Face and National Verification Number Was Previously Registered With Age: {existing_face.age}.', 'info')
-                                    return render_template('register_form.html')
-                            else:
-                                flash('Criminal With Same National Verification Number Already Exists.', 'info')
-                                return render_template('register_form.html')
-                    # If no overlapping detected faces found, display relevant message
-                    flash('A Criminal Already With Different Face Exists With National Verification Number: {existing_face.national_verification_number}', 'info')
-                    return render_template('register_form.html')
-                
-                
+
+                    specific_face_encoding = [np.frombuffer(existing_face.face_image, dtype=np.uint8)]
+                    specific_face_encoding = [face_recognition.face_encodings(cv2.imdecode(encoding, cv2.IMREAD_COLOR))[0] for encoding in specific_face_encoding]
+                    bool = False
+                    # bool is a flag for face match
+                    # face encodings of the uploaded image is as follows:
+                    face_encods = face_recognition.face_encodings(rgb_image, face_location)
+                    for face_encod, (top, right, bottom, left) in zip(face_encods, face_location):
+                        face_matching = face_recognition.compare_faces(specific_face_encoding, face_encod)
+                        if any(face_matching):
+                            bool = True
+
+                    if bool == True:
+                        if existing_face.date_of_birth == date_of_birth.date() and existing_face.name == name and existing_face.gender == gender:
+
+                           if int(age) >= int(existing_face.age):
+                              existing_face.crime_type = existing_face.crime_type + ',' + crime_type
+                              existing_face.age = age
+                              db.session.commit()
+                              flash('Criminal is Already Registered. All Details Updated Except Previously Registered Photo.', 'info')
+                              return render_template('register_form.html')
+                           else:
+                              flash(f'Criminal Having Same Face and National Verification Number Was Previously Registered With Age: {existing_face.age}.', 'info')
+                              return render_template('register_form.html')
+                        else:
+                          flash('Criminal With Same National Verification Number Already Exists.', 'info')
+                          return render_template('register_form.html')
+                    else:
+                        flash(f'A Criminal Already With Different Face Exists With National Verification Number: {existing_face.national_verification_number}' , 'info')
+                        return render_template('register_form.html')
+
                 # To check is the face uploaded image is same as that of a registered criminal in the database
-                stored_criminal_faces_ = DetectedCriminals.query.all()
+                stored_criminal_faces_ = DetectedFace.query.all()
                 if stored_criminal_faces_:
-                    for stored_criminal_face in stored_criminal_faces_:
-                        stored_face_x = stored_criminal_face.x
-                        stored_face_y = stored_criminal_face.y
-                        stored_face_w = stored_criminal_face.w
-                        stored_face_h = stored_criminal_face.h
-                        for (x, y, w, h) in faces:
-                          if x < stored_face_x + stored_face_w and \
-                             x + w > stored_face_x and \
-                             y < stored_face_y + stored_face_h and \
-                             y + h > stored_face_y:
-                             flash('Criminal With Same Face Already Exists.', 'warning')
-                             return render_template('register_form.html') 
+                    criminal_faces_encodings = [np.frombuffer(face.face_image, dtype=np.uint8) for face in stored_criminal_faces_]
+                    criminal_faces_encodings = [face_recognition.face_encodings(cv2.imdecode(encoding, cv2.IMREAD_COLOR))[0] for encoding in criminal_faces_encodings]
+
+                    face_encodins = face_recognition.face_encodings(rgb_image, face_location)
+
+                    for face_encodin, (top, right, bottom, left) in zip(face_encodins, face_location):
+                        match = face_recognition.compare_faces(criminal_faces_encodings, face_encodin)
+                        if any(match):
+                            flash('Criminal With Same Face Already Exists.', 'warning')
+                            return render_template('register_form.html')
 
 
-                for (x, y, w, h) in faces:
-                    cropped_face = img[y:y+h, x:x+w]
+                for (top, right, bottom, left) in face_location:
+                    cropped_face = img[top:bottom, left:right]
                     # Convert image to byte array before storing
-                    
-                    _, encoded_image = cv2.imencode('.jpg', cropped_face)
-                    image_as_bytes = encoded_image.tobytes()
-
-                    # To ensure no duplicate crime is Registered
-                    temp_var=crime_type.split(',')
-                    unique_crime=[]
-
-                    for tp in temp_var:
-                         if tp not in unique_crime:
-                             unique_crime.append(tp)
-                    crime_type=','.join(unique_crime)
-            
-                    new_face = DetectedCriminals(
+                    image_as_bytes = cv2.imencode('.jpg', cropped_face)[1].tobytes()
+                    new_face = DetectedFace(
                         name=name,
                         date_of_birth=date_of_birth,
                         age=age,
                         gender=gender,
                         crime_type=crime_type,
                         national_verification_number=national_verification_number,
-                        x=int(x),
-                        y=int(y),
-                        w=int(w),
-                        h=int(h),
+                        top=top,
+                        right=right,
+                        bottom=bottom,
+                        left=left,
                         face_image=image_as_bytes  # Store the image data
                     )
                     db.session.add(new_face)
@@ -204,59 +187,60 @@ def investigate():
         if photo_file:
             photo_data = photo_file.read()  # Read the binary data of the uploaded photo
 
-            nparr = np.frombuffer(photo_data, dtype=np.uint8)  # Convert binary data to numpy array
-            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)  # Decode the image
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)  # Convert image to grayscale
+            # Convert the uploaded photo to numpy array
+            nparr = np.frombuffer(photo_data, np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-             # Load the Haar cascade classifier for face detection
-            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+            # Convert the image to RGB format (required by face_recognition library)
+            rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
             # Detect faces in the uploaded image
-            faces_locations_ = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=7, minSize=(70, 70))
+            face_locations_ = face_recognition.face_locations(rgb_img)
 
-
-            if len(faces_locations_) == 0:
+            if len(face_locations_) == 0:
                 flash('No Faces Were Detected In The Uploaded Image.', 'error')
             else:
-                
                 # Encode the uploaded image to base64 for displaying
                 _, img_encoded = cv2.imencode('.jpg', img)
                 img_base64 = base64.b64encode(img_encoded).decode('utf-8')
 
-                stored_faces_ = DetectedCriminals.query.all()
-                if not stored_faces_:
+                # Retrieve stored faces from the database
+                stored_faces_ = DetectedFace.query.all()
+                if len(stored_faces_) == 0:
                     flash('No Criminal Faces Stored In The Database.', 'error')
                     return redirect(url_for('img_inv'))
-                for stored_face in stored_faces_:
-                    stored_face_x = stored_face.x
-                    stored_face_y = stored_face.y
-                    stored_face_w = stored_face.w
-                    stored_face_h = stored_face.h
 
-                    for (x, y, w, h) in faces_locations_:
-                       
-                        # Check if the detected face overlaps with any stored face
-                        if x < stored_face_x + stored_face_w and \
-                           x + w > stored_face_x and \
-                           y < stored_face_y + stored_face_h and \
-                           y + h > stored_face_y:
-                            # If overlapping, add criminal details to the list
-                            photo_base64 = base64.b64encode(stored_face.face_image).decode('utf-8')
-                            criminal.append({
-                                'photo': photo_base64,
-                                'name': stored_face.name,
-                                'date_of_birth': stored_face.date_of_birth,
-                                'gender': stored_face.gender,
-                                'national_verification_number': stored_face.national_verification_number,
-                                'crime_type': stored_face.crime_type,
-                                'age': stored_face.age
-                            })
+                # Load stored face encodings
+                stored_encoding_ = [np.frombuffer(face.face_image, dtype=np.uint8) for face in stored_faces_]
+                stored_encoding_ = [face_recognition.face_encodings(cv2.imdecode(encoding, cv2.IMREAD_COLOR))[0] for encoding in stored_encoding_]
 
-                if not criminal:
-                    flash('No Criminals Detected.', 'error')
+                # Convert face locations to encodings
+                face_encodings = face_recognition.face_encodings(rgb_img, face_locations_)
+
+                # Iterate through detected faces
+                for face_encoding, (top, right, bottom, left) in zip(face_encodings, face_locations_):
+                    # Compare the face encoding with stored encodings
+                    matches = face_recognition.compare_faces(stored_encoding_, face_encoding)
+
+                    # Check if any matches found
+                    if any(matches):
+                        matched_face = stored_faces_[matches.index(True)]
+                        photo_base64 = base64.b64encode(matched_face.face_image).decode('utf-8')
+                        criminal.append({
+                            'photo': photo_base64,
+                            'name': matched_face.name,
+                            'date_of_birth': matched_face.date_of_birth,
+                            'gender': matched_face.gender,
+                            'national_verification_number': matched_face.national_verification_number,
+                            'crime_type': matched_face.crime_type,
+                            'age': matched_face.age,
+
+                        })
+                    else:
+                        flash('No Criminals Detected.', 'error')
 
                 return render_template('img_inv.html', criminals=criminal, img_base64=img_base64)
-    return redirect(url_for('img_inv'))               
+    return redirect(url_for('img_inv'))
 
 
 
@@ -283,79 +267,73 @@ def investigate_video():
             custom_video_capture = CustomVideoCapture()
             custom_video_capture.open(video_path)
 
-            # Frame skipping parameters
-            skip_frames = 15  # Skip every 5th frame
-            frame_count = 0
-
-            # number of frames with detected face
-            fwfd = 0
-            # Flag to indicate if any criminals are detected
-            criminals_detected = False
-
-            # Load the Haar cascade classifier for face detection
-            face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-
             # Retrieve stored faces from the database
-            stored_faces = DetectedCriminals.query.all()
+            stored_faces = DetectedFace.query.all()
             if len(stored_faces) == 0:
                 flash('No Criminal Faces Stored In The Database.', 'error')
+
             else:
-                # Frame processing loop
-                while True:
-                    ret, frame = custom_video_capture.read()
-                    if not ret:
-                        break
+               # Load stored face encodings and associated information
+               stored_encodings = [np.frombuffer(face.face_image, dtype=np.uint8) for face in stored_faces]
+               stored_encodings = [face_recognition.face_encodings(cv2.imdecode(encoding, cv2.IMREAD_COLOR))[0] for encoding in stored_encodings]
 
-                    if frame_count % skip_frames != 0:
-                        frame_count += 1
-                        continue  # Skip this frame
+               # Frame skipping parameters
+               skip_frames = 15  # Skip every 5th frame
+               frame_count = 0
 
-                    gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+               # number of frames with detected face
+               fwfd = 0
+               # Flag to indicate if any criminals are detected
+               criminals_detected = False
+               # Face detection and recognition logic here
+               while True:
+                   ret, frame = custom_video_capture.read()
+                   if not ret:
+                       break
 
-                    # Detect faces in the frame using Haar cascade
-                    faces_locations = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=7, minSize=(70, 70))
+                   if frame_count % skip_frames != 0:
+                       frame_count += 1
+                       continue  # Skip this frame
 
-                    # If no faces are detected in the frame, continue to the next frame
-                    if len(faces_locations) == 0:
-                        frame_count += 1
-                        continue
-                    else:
-                        fwfd += 1
-                        for (x, y, w, h) in faces_locations:
-                            # Check if the detected face overlaps with any stored face
-                            for stored_face in stored_faces:
-                                stored_face_x = stored_face.x
-                                stored_face_y = stored_face.y
-                                stored_face_w = stored_face.w
-                                stored_face_h = stored_face.h
-                                if x < stored_face_x + stored_face_w and \
-                                   x + w > stored_face_x and \
-                                   y < stored_face_y + stored_face_h and \
-                                   y + h > stored_face_y:
-                                    # If overlapping, add criminal details to the list
-                                    photo_base64 = base64.b64encode(stored_face.face_image).decode('utf-8')
-                                    criminal.append({
-                                        'photo': photo_base64,
-                                        'name': stored_face.name,
-                                        'date_of_birth': stored_face.date_of_birth,
-                                        'gender': stored_face.gender,
-                                        'national_verification_number': stored_face.national_verification_number,
-                                        'crime_type': stored_face.crime_type,
-                                        'age': stored_face.age
-                                    })
-                                    criminals_detected = True
+                   rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                   face_locations = face_recognition.face_locations(rgb_frame)
 
-                    frame_count += 1
+                   # If no faces are detected in the frame, continue to the next frame
+                   if not face_locations:
+                       frame_count += 1
+                       continue
+                   else:
+                       fwfd += 1
+                       CriminalDetected = False
+                       face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
+                       for encoding, (top, right, bottom, left) in zip(face_encodings, face_locations):
+                           # Compare the detected face encoding with the stored encodings
+                           matches = face_recognition.compare_faces(stored_encodings, encoding)
+                           if any(matches):
+                               matched_index = matches.index(True)
+                               # Gather information about the detected criminal
+                               criminal_info = {
+                                   'name': stored_faces[matched_index].name,
+                                   'date_of_birth': stored_faces[matched_index].date_of_birth,
+                                   'gender': stored_faces[matched_index].gender,
+                                   'national_verification_number': stored_faces[
+                                    matched_index].national_verification_number,
+                                   'crime_type': stored_faces[matched_index].crime_type,
+                                   'age': stored_faces[matched_index].age,
+                                   'photo': base64.b64encode(stored_faces[matched_index].face_image).decode('utf-8')
+                               }
+                               criminal.append(criminal_info)
+                               criminals_detected = True
+                       frame_count += 1
+               custom_video_capture.release()
 
-                custom_video_capture.release()
+               if fwfd == 0:
+                   flash('No Faces Detected In The Uploaded Video.', 'error')
+               else:
+                   if not criminals_detected:
+                       flash('No Criminals Detected.', 'error')
+    return render_template('inv_vd.html', criminals=criminal, )
 
-                if fwfd == 0:
-                    flash('No Faces Detected In The Uploaded Video.', 'error')
-                else:
-                    if not criminals_detected:
-                        flash('No Criminals Detected.', 'error')
-
-    return render_template('inv_vd.html', criminals=criminal)
 
 
 if __name__ == '__main__':
