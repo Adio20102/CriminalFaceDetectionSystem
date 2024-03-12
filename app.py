@@ -9,6 +9,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 
+
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -34,7 +35,7 @@ class CustomVideoCapture:
         self.video_capture.release()
 
 
-class DetectedFace(db.Model):
+class RegisteredCriminals(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100))
     date_of_birth = db.Column(db.Date)
@@ -96,7 +97,7 @@ def register():
                     return render_template('register_form.html')
 
                 # Query the database for existing faces with matching national verification number
-                existing_face = DetectedFace.query.filter_by(national_verification_number=national_verification_number).first()
+                existing_face = RegisteredCriminals.query.filter_by(national_verification_number=national_verification_number).first()
 
                 if existing_face:
 
@@ -116,6 +117,12 @@ def register():
 
                            if int(age) >= int(existing_face.age):
                               existing_face.crime_type = existing_face.crime_type + ',' + crime_type
+                              temp = existing_face.crime_type.split(',')
+                              unique_elements = []
+                              for tp in temp:
+                                  if tp not in unique_elements:
+                                      unique_elements.append(tp)
+                              existing_face.crime_type = ','.join(unique_elements)
                               existing_face.age = age
                               db.session.commit()
                               flash('Criminal is Already Registered. All Details Updated Except Previously Registered Photo.', 'info')
@@ -131,7 +138,7 @@ def register():
                         return render_template('register_form.html')
 
                 # To check is the face uploaded image is same as that of a registered criminal in the database
-                stored_criminal_faces_ = DetectedFace.query.all()
+                stored_criminal_faces_ = RegisteredCriminals.query.all()
                 if stored_criminal_faces_:
                     criminal_faces_encodings = [np.frombuffer(face.face_image, dtype=np.uint8) for face in stored_criminal_faces_]
                     criminal_faces_encodings = [face_recognition.face_encodings(cv2.imdecode(encoding, cv2.IMREAD_COLOR))[0] for encoding in criminal_faces_encodings]
@@ -149,7 +156,16 @@ def register():
                     cropped_face = img[top:bottom, left:right]
                     # Convert image to byte array before storing
                     image_as_bytes = cv2.imencode('.jpg', cropped_face)[1].tobytes()
-                    new_face = DetectedFace(
+
+                    # To ensure no duplicate crime is Registered
+                    temp_var = crime_type. split(',')
+                    unique_crime = []
+                    for tp in temp_var:
+                        if tp not in unique_crime:
+                            unique_crime.append(tp)
+                    crime_type = ','.join(unique_crime)
+
+                    new_face = RegisteredCriminals(
                         name=name,
                         date_of_birth=date_of_birth,
                         age=age,
@@ -204,7 +220,7 @@ def investigate():
                 img_base64 = base64.b64encode(img_encoded).decode('utf-8')
 
                 # Retrieve stored faces from the database
-                stored_faces_ = DetectedFace.query.all()
+                stored_faces_ = RegisteredCriminals.query.all()
                 if len(stored_faces_) == 0:
                     flash('No Criminal Faces Stored In The Database.', 'error')
                     return redirect(url_for('img_inv'))
@@ -267,7 +283,7 @@ def investigate_video():
             custom_video_capture.open(video_path)
 
             # Retrieve stored faces from the database
-            stored_faces = DetectedFace.query.all()
+            stored_faces = RegisteredCriminals.query.all()
             if len(stored_faces) == 0:
                 flash('No Criminal Faces Stored In The Database.', 'error')
 
