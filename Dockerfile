@@ -1,7 +1,7 @@
 FROM python:3.9-slim
 
-# Install CMake and build essentials
-RUN apt-get update && apt-get install -y cmake build-essential \
+# Install CMake, build essentials, and libpq-dev
+RUN apt-get update && apt-get install -y cmake build-essential libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -11,7 +11,8 @@ WORKDIR /app
 COPY requirements.txt .
 
 # Install dependencies
-RUN --mount=type=cache,target=/root/.cache/pip pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
 # Copy your application code
 COPY . .
 
