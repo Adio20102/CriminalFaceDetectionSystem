@@ -83,7 +83,7 @@ def register():
             face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
             # Detect faces in the uploaded image
-            faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(70, 70))
+            faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=7, minSize=(70, 70))
             if not len(faces):  # No faces detected
                 flash('No faces Detected In The Uploaded Image.', 'error')
                 return render_template('register_form.html')
@@ -212,7 +212,7 @@ def investigate():
             face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
             # Detect faces in the uploaded image
-            faces_locations_ = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(70, 70))
+            faces_locations_ = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=7, minSize=(70, 70))
 
 
             if len(faces_locations_) == 0:
@@ -313,7 +313,7 @@ def investigate_video():
                     gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
                     # Detect faces in the frame using Haar cascade
-                    faces_locations = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=5, minSize=(70, 70))
+                    faces_locations = face_cascade.detectMultiScale(gray_frame, scaleFactor=1.1, minNeighbors=7, minSize=(70, 70))
 
                     # If no faces are detected in the frame, continue to the next frame
                     if len(faces_locations) == 0:
