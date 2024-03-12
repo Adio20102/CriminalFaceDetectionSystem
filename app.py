@@ -112,6 +112,13 @@ def register():
                             if existing_face.date_of_birth == date_of_birth.date() and existing_face.name == name and existing_face.gender == gender:
                                 if int(age) >= int(existing_face.age):
                                     existing_face.crime_type = existing_face.crime_type + ',' + crime_type
+                                    # To handle  duplicate crimes
+                                    temp=existing_face.crime_type.split(',')
+                                    unique_elements = []
+                                    for tp in temp:
+                                        if tp not in unique_elements:
+                                            unique_elements.append(tp)
+                                    existing_face.crime_type=','.join(unique_elements)
                                     existing_face.age = age
                                     db.session.commit()
                                     flash('Criminal is Already Registered. All Details Updated Except Previously Registered Photo.', 'info')
@@ -150,6 +157,15 @@ def register():
                     
                     _, encoded_image = cv2.imencode('.jpg', cropped_face)
                     image_as_bytes = encoded_image.tobytes()
+
+                    # To ensure no duplicate crime is Registered
+                    temp_var=crime_type.split(',')
+                    unique_crime=[]
+
+                    for tp in temp_var:
+                         if tp not in unique_crime:
+                             unique_crime.append(tp)
+                    crime_type=','.join(unique_crime)
             
                     new_face = DetectedCriminals(
                         name=name,
