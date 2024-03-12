@@ -6,9 +6,9 @@ import numpy as np
 import base64
 
 
-# postgresql://criminaldatabase_user:nSJbgUwleTYMuAZMi7dj3N1TvD9afXxT@dpg-cnlhr9mn7f5s73ctukgg-a.singapore-postgres.render.com/criminaldatabase
+
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://criminaldatabase_user:nSJbgUwleTYMuAZMi7dj3N1TvD9afXxT@dpg-cnlhr9mn7f5s73ctukgg-a.singapore-postgres.render.com/criminaldatabase'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'your_secret_key'
 db = SQLAlchemy(app)
@@ -198,15 +198,6 @@ def investigate():
             # Detect faces in the uploaded image
             faces_locations_ = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))
 
-        #    wdw # Convert the uploaded photo to numpy array
-        #     nparr = np.frombuffer(photo_data, np.uint8)
-        #     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-        #     # Convert the image to RGB format (required by face_recognition library)
-        #     rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-        #     # Detect faces in the uploaded image
-        #     face_locations_ = face_recognition.face_locations(rgb_img)
 
             if len(faces_locations_) == 0:
                 flash('No Faces Were Detected In The Uploaded Image.', 'error')
