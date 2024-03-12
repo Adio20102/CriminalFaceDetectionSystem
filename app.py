@@ -12,7 +12,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://criminaldatabase_user:nSJb
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = 'your_secret_key'
 db = SQLAlchemy(app)
-print(app.config['SQLALCHEMY_DATABASE_URI'])
+
 
 
 
@@ -34,7 +34,7 @@ class CustomVideoCapture:
         self.video_capture.release()
 
 
-class etectedFace(db.Model):
+class DetectedCriminals(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100))
     date_of_birth = db.Column(db.Date)
@@ -99,7 +99,7 @@ def register():
                     return render_template('register_form.html')
 
                 # Query the database for existing faces with matching national verification number
-                existing_face = etectedFace.query.filter_by(national_verification_number=national_verification_number).first()
+                existing_face = DetectedCriminals.query.filter_by(national_verification_number=national_verification_number).first()
 
                 if existing_face:
                     # Check if any detected faces overlap with the existing face
@@ -128,7 +128,7 @@ def register():
                 
                 
                 # To check is the face uploaded image is same as that of a registered criminal in the database
-                stored_criminal_faces_ = etectedFace.query.all()
+                stored_criminal_faces_ = DetectedCriminals.query.all()
                 if stored_criminal_faces_:
                     for stored_criminal_face in stored_criminal_faces_:
                         stored_face_x = stored_criminal_face.x
@@ -150,8 +150,8 @@ def register():
                     
                     _, encoded_image = cv2.imencode('.jpg', cropped_face)
                     image_as_bytes = encoded_image.tobytes()
-                    print("this is the type of x that I will have before storing",type(x))
-                    new_face = etectedFace(
+            
+                    new_face = DetectedCriminals(
                         name=name,
                         date_of_birth=date_of_birth,
                         age=age,
@@ -216,7 +216,7 @@ def investigate():
                 _, img_encoded = cv2.imencode('.jpg', img)
                 img_base64 = base64.b64encode(img_encoded).decode('utf-8')
 
-                stored_faces_ = etectedFace.query.all()
+                stored_faces_ = DetectedCriminals.query.all()
                 if not stored_faces_:
                     flash('No Criminal Faces Stored In The Database.', 'error')
                     return redirect(url_for('img_inv'))
@@ -227,8 +227,7 @@ def investigate():
                     stored_face_h = stored_face.h
 
                     for (x, y, w, h) in faces_locations_:
-                        print("type of face x",type(x))
-                        print("type of stored face x I got",type(stored_face_x))
+                       
                         # Check if the detected face overlaps with any stored face
                         if x < stored_face_x + stored_face_w and \
                            x + w > stored_face_x and \
@@ -290,7 +289,7 @@ def investigate_video():
             face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
             # Retrieve stored faces from the database
-            stored_faces = etectedFace.query.all()
+            stored_faces = DetectedCriminals.query.all()
             if len(stored_faces) == 0:
                 flash('No Criminal Faces Stored In The Database.', 'error')
             else:
